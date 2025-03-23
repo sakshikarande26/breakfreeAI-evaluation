@@ -31,7 +31,7 @@ class AgentState(BaseModel):
 
 
 # Node: Content Extraction (Integrated PDF processing)
-def extract_content(state: AgentState):
+def extractContent(state: AgentState):
     # PDF extraction and cleaning
     with pdfplumber.open(state.file_path) as pdf:
         text = ""
@@ -52,7 +52,7 @@ def extract_content(state: AgentState):
 
 
 # Node: Classification with Enhanced Structure
-def classify_document(state: AgentState):
+def classifyDocument(state: AgentState):
     prompt = f"""
     You are an AI-powered document classification and compliance agent. Your task is to analyze the structure of a given PDF document and determine whether it follows the format of either:
 
@@ -119,7 +119,7 @@ def classify_document(state: AgentState):
         response = llm([HumanMessage(content=prompt)])
 
         # Debug the response
-        print(f"Raw response: {response.content}")
+        # print(f"Raw response: {response.content}")
 
         if not response.content or not response.content.strip():
             raise ValueError("Empty LLM response")
@@ -158,7 +158,7 @@ def classify_document(state: AgentState):
 
 
 # Node: e-learning script Evaluation
-def elearning_quality_check(state: AgentState) -> AgentState:
+def evaluateElearning(state: AgentState) -> AgentState:
     prompt_template = PromptTemplate(
         template="""
         You are an evaluator tasked with verifying the structure of a e-learning scripts document. 
@@ -242,7 +242,8 @@ def elearning_quality_check(state: AgentState) -> AgentState:
         }},
         "Total Score": "(score)",
         "Compliance Status": "(Compliant/Non-Compliant)",
-        "Feedback": "(summary of missing sections)"
+        "Feedback":"(detailed feedback of missing sections)",
+        "Suggestions":" (a numbered list of improvements needed in the documents to increase the total score for high quality)"
         }}
         """,
         input_variables=["extracted_text"],
@@ -286,7 +287,7 @@ def elearning_quality_check(state: AgentState) -> AgentState:
     return state  # Return state even if there's an error
 
 
-def evaluate_training_proposal(state: AgentState) -> AgentState:
+def evaluateTrainingProposal(state: AgentState) -> AgentState:
     prompt_template = PromptTemplate(
         template="""
         You are an evaluator tasked with verifying the structure of a training proposal document. 
@@ -335,49 +336,50 @@ def evaluate_training_proposal(state: AgentState) -> AgentState:
         **Document Content:**
         {extracted_text}
 
-        Generate output strictly in the following JSON format:
+        Generate output strictly in the following JSON format with no additional text or formatting:
+
         {{
           "scores": {{
-            "Presence of Introduction & Program Overview": (score),
-            "Clearly defined Learning Objectives": (score),
-            "Target Audience Description": (score),
-            "Training Methodology Explanation": (score),
-            "Course Outline & Content": (score),
-            "Assessment & Evaluation Approach": (score),
-            "Duration & Delivery Format": (score),
-            "Trainer/Facilitator Profile": (score),
-            "Pricing & Investment Details": (score),
-            "Call to Action & Next Steps": (score)
+            "Presence of Introduction & Program Overview": "1",
+            "Clearly defined Learning Objectives": "1",
+            "Target Audience Description": "1",
+            "Training Methodology Explanation": "1",
+            "Course Outline & Content": "1",
+            "Assessment & Evaluation Approach": "1",
+            "Duration & Delivery Format": "1",
+            "Trainer/Facilitator Profile": "1",
+            "Pricing & Investment Details": "1",
+            "Call to Action & Next Steps": "1"
           }},
           "Reasoning": {{
-            "Presence of Introduction & Program Overview": "(reason)",
-            "Clearly defined Learning Objectives": "(reason)",
-            "Target Audience Description": "(reason)",
-            "Training Methodology Explanation": "(reason)",
-            "Course Outline & Content": "(reason)",
-            "Assessment & Evaluation Approach": "(reason)",
-            "Duration & Delivery Format": "(reason)",
-            "Trainer/Facilitator Profile": "(reason)",
-            "Pricing & Investment Details": "(reason)",
-            "Call to Action & Next Steps": "(reason)"
+            "Presence of Introduction & Program Overview": "reason here",
+            "Clearly defined Learning Objectives": "reason here",
+            "Target Audience Description": "reason here",
+            "Training Methodology Explanation": "reason here",
+            "Course Outline & Content": "reason here",
+            "Assessment & Evaluation Approach": "reason here",
+            "Duration & Delivery Format": "reason here",
+            "Trainer/Facilitator Profile": "reason here",
+            "Pricing & Investment Details": "reason here",
+            "Call to Action & Next Steps": "reason here"
           }},
-          "Total Score": "(score)",
-          "Compliance Status": "(Compliant/Non-Compliant)",
-          "Feedback": "(summary of missing sections)"
+          "Total Score": "8",
+          "Compliance Status": "Compliant",
+          "Feedback": "detailed feedback here",
+          "Suggestions": "1. First suggestion\\n2. Second suggestion"
         }}
         """,
         input_variables=["extracted_text"],
     )
 
     try:
-        # Fix parameter name
         prompt = prompt_template.format(extracted_text=state.extracted_text)
         response = llm([HumanMessage(content=prompt)])
 
         if not response.content:
             raise ValueError("Empty LLM response")
 
-        # Clean the response before parsing
+        # Clean the response content
         cleaned_content = response.content.strip()
 
         # Remove any markdown code block indicators
@@ -387,17 +389,21 @@ def evaluate_training_proposal(state: AgentState) -> AgentState:
             cleaned_content = cleaned_content.split("```", 1)[1]
         if cleaned_content.endswith("```"):
             cleaned_content = cleaned_content.rsplit("```", 1)[0]
-
+                                                                                                                     
         cleaned_content = cleaned_content.strip()
 
-        evaluation_data = json.loads(cleaned_content)
+        # Parse JSON with better error handling
+        try:
+            evaluation_data = json.loads(cleaned_content)
+        except json.JSONDecodeError as je:
+            raise ValueError(f"JSON parsing failed: {str(je)}\nResponse content: {cleaned_content[:200]}...")
 
-        # Store directly in state and preserve other attributes
+        # Store in state
         state.evaluation = evaluation_data
-        # Make sure to preserve the predicted_category
         if not hasattr(state, "predicted_category"):
             state.predicted_category = "Training Proposal"
         return state
+
     except Exception as e:
         state.has_error = True
         state.error_message = f"Training Proposal Evaluation failed: {str(e)}"
@@ -445,11 +451,11 @@ graph = StateGraph(AgentState)
 # graph.set_entry_point(START)
 
 # Add nodes
-graph.add_node("extract_text", extract_content)
-graph.add_node("classify_document", classify_document)
+graph.add_node("extract_text", extractContent)
+graph.add_node("classify_document", classifyDocument)
 graph.add_node("routing", routing_agent)
-graph.add_node("training_proposal", evaluate_training_proposal)
-graph.add_node("elearning_script", elearning_quality_check)
+graph.add_node("training_proposal", evaluateTrainingProposal)
+graph.add_node("elearning_script", evaluateElearning)
 graph.add_node("error_handler", handle_error)
 graph.add_node("unknown_category", handle_unknown_category)
 
