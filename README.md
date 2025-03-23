@@ -9,6 +9,6 @@ The project is organized into four primary components:
 3. **routing**: Responsible for predicting the category of content based on its structural analysis.
 4. **multiagent**: This component integrates structure evaluation, category classification, routing, and quality evaluation for the predicted category.
 
-## Local Installation and Execution
+## Local Execution
 To run the project locally on streamlit, execute the following command in your terminal:
 `streamlit run [filename].py`
