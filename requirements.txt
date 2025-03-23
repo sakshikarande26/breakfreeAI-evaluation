@@ -1,0 +1,7 @@
+streamlit
+python-dotenv
+pdfplumber
+langchain
+langchain-groq
+langgraph
+langchain-core
