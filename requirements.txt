@@ -5,3 +5,5 @@ langchain
 langchain-groq
 langgraph
 langchain-core
+fastapi
+uvicorn
