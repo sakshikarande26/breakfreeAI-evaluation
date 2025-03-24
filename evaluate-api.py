@@ -520,6 +520,7 @@ async def process_pdf(file: UploadFile = File(...)):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+# Use dynamic PORT variable and bind to 0.0.0.0
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    port = int(os.environ.get("PORT", 8000))  # Default to 8000 if PORT isn't set
+    uvicorn.run("evaluate-api:app", host="0.0.0.0", port=port, reload=True)
