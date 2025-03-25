@@ -12,8 +12,18 @@ from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from fastapi import FastAPI, UploadFile, File
 from io import BytesIO
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"],  
+    allow_headers=["*"],
+)
+
 
 port = int(os.environ.get("PORT", 8000))
 
